@@ -93,10 +93,13 @@
                     <select id="role" required>
                         <option value="" disabled selected>Wählen...</option>
                         <option value="Regie">Regie</option>
+                        <option value="Regieassistenz">Regieassistenz</option>
                         <option value="Produktion">Produktion</option>
                         <option value="Kamera">Kamera</option>
                         <option value="Licht">Licht</option>
                         <option value="Ton">Ton</option>
+                        <option value="Schnitt">Schnitt</option>
+                        <option value="Maske">Maske / Kostüm</option>
                     </select>
                     <div class="btn-group">
                         <button type="button" onclick="prevStep(6)" class="btn-secondary">Zurück</button>
@@ -140,7 +143,7 @@
                     </div>
                     
                     <div class="dash-column">
-                        <h3>Offene Anfragen & Entscheidungen</h3>
+                        <h3>Neueste Anfragen (Top 3)</h3>
                         <div id="requests-dashboard"></div>
 
                         <h3 style="margin-top: 2rem;">Zentrales Material</h3>
@@ -198,7 +201,10 @@
                     <button onclick="sendRequest()">Anfrage absenden</button>
                 </div>
 
-                <h2 style="margin-top: 2rem;">Posteingang (Erhältlich & Gesendet)</h2>
+                <div class="header-action" style="margin-top: 2rem;">
+                    <h2>Posteingang (Erhalten & Gesendet)</h2>
+                    <button onclick="clearInbox()" class="action-btn" style="background-color: var(--accent-red);">Posteingang löschen</button>
+                </div>
                 <div id="requests-container"></div>
             </section>
 
@@ -235,6 +241,7 @@
                     <ul id="contacts-list" style="list-style:none; line-height: 1.8;">
                         <li><strong>Produktionsleitung:</strong> <span id="contact-produktion">Wird geladen...</span></li>
                         <li><strong>Regie:</strong> <span id="contact-regie">Wird geladen...</span></li>
+                        <li><strong>Regieassistenz:</strong> <span id="contact-regieassistenz">Wird geladen...</span></li>
                     </ul>
                 </div>
             </section>
@@ -242,6 +249,25 @@
             <!-- Verwaltung View -->
             <section id="verwaltung" class="tab-content">
                 <h2>Team verwalten</h2>
+                <div class="card" style="max-width: 100%; margin-bottom: 2rem; margin-left: 0;">
+                    <h3>Neue Rolle / Person hinzufügen</h3>
+                    <input type="text" id="new-member-name" placeholder="Vollständiger Name" required>
+                    <input type="email" id="new-member-email" placeholder="E-Mail-Adresse" required>
+                    <input type="tel" id="new-member-phone" placeholder="Handynummer" required>
+                    <select id="new-member-role" required>
+                        <option value="" disabled selected>Rolle wählen...</option>
+                        <option value="Regie">Regie</option>
+                        <option value="Regieassistenz">Regieassistenz</option>
+                        <option value="Produktion">Produktion</option>
+                        <option value="Kamera">Kamera</option>
+                        <option value="Licht">Licht</option>
+                        <option value="Ton">Ton</option>
+                        <option value="Schnitt">Schnitt</option>
+                        <option value="Maske">Maske / Kostüm</option>
+                    </select>
+                    <button onclick="addNewTeamMember()" style="margin-top: 10px;">Hinzufügen</button>
+                </div>
+
                 <div class="table-container" style="margin-top: 1rem;">
                     <table>
                         <thead>
