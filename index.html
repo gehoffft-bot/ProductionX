@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ashes - Crew App</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div id="auth-screen" class="screen active">
+        <div class="card">
+            <h1>Ashes Login</h1>
+            <div class="form-step active">
+                <label>E-Mail-Adresse eingeben</label>
+                <input type="email" id="login-email" placeholder="mail@beispiel.de">
+                <button onclick="loginUser()">Anmelden</button>
+                <button class="btn-secondary" onclick="showRegistration()" style="margin-top: 10px;">Neu im Team? Hier eintragen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding / Registrierung -->
+    <div id="onboarding-screen" class="screen">
+        <div class="card">
+            <h1>Crew Onboarding</h1>
+            <div id="onboarding-form">
+                <div class="form-step active" id="step-1">
+                    <label>👤 Vollständiger Name</label>
+                    <input type="text" id="name" placeholder="Vor- und Nachname" required>
+                    <button type="button" onclick="nextStep(1)">Weiter</button>
+                    <button class="btn-secondary" onclick="showLogin()" style="margin-top: 10px;">Zurück zum Login</button>
+                </div>
+                <div class="form-step" id="step-2">
+                    <label>🎂 Geburtsdatum</label>
+                    <input type="date" id="dob" required>
+                    <label>🏠 Wohnadresse</label>
+                    <input type="text" id="address-street" placeholder="Straße und Hausnummer" required>
+                    <input type="text" id="address-zip" placeholder="Postleitzahl" pattern="[0-9]{5}" required>
+                    <input type="text" id="address-city" placeholder="Wohnort" required>
+                    <div class="btn-group">
+                        <button type="button" onclick="prevStep(2)" class="btn-secondary">Zurück</button>
+                        <button type="button" onclick="nextStep(2)">Weiter</button>
+                    </div>
+                </div>
+                <div class="form-step" id="step-3">
+                    <label>📱 Handynummer</label>
+                    <input type="tel" id="phone" placeholder="0170 1234567" required>
+                    <label>✉️ E-Mail-Adresse</label>
+                    <input type="email" id="email" placeholder="mail@beispiel.de" required>
+                    <div class="btn-group">
+                        <button type="button" onclick="prevStep(3)" class="btn-secondary">Zurück</button>
+                        <button type="button" onclick="nextStep(3)">Weiter</button>
+                    </div>
+                </div>
+                <div class="form-step" id="step-4">
+                    <label>🚗 Fortbewegungsmittel</label>
+                    <select id="transport" required>
+                        <option value="" disabled selected>Wählen...</option>
+                        <option value="ÖPNV">ÖPNV</option>
+                        <option value="Automobil">Eigenes Automobil</option>
+                        <option value="Keines">Keines (Fahrgemeinschaft nötig)</option>
+                    </select>
+                    <div class="btn-group">
+                        <button type="button" onclick="prevStep(4)" class="btn-secondary">Zurück</button>
+                        <button type="button" onclick="nextStep(4)">Weiter</button>
+                    </div>
+                </div>
+                <div class="form-step" id="step-5">
+                    <label>🥗 Ernährungsweise</label>
+                    <select id="diet" required>
+                        <option value="" disabled selected>Wählen...</option>
+                        <option value="Omnivor">Omnivor (Alles)</option>
+                        <option value="Vegetarisch">Vegetarisch</option>
+                        <option value="Vegan">Vegan</option>
+                    </select>
+                    <label>⚠️ Allergien vorhanden?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="has_allergy" value="yes" onchange="toggleAllergy(true)"> Ja</label>
+                        <label><input type="radio" name="has_allergy" value="no" onchange="toggleAllergy(false)" checked> Nein</label>
+                    </div>
+                    <input type="text" id="allergy-details" placeholder="Welche Allergien?" style="display:none;">
+                    <div class="btn-group">
+                        <button type="button" onclick="prevStep(5)" class="btn-secondary">Zurück</button>
+                        <button type="button" onclick="nextStep(5)">Weiter</button>
+                    </div>
+                </div>
+                <div class="form-step" id="step-6">
+                    <label>🎬 Rolle im Team</label>
+                    <select id="role" required>
+                        <option value="" disabled selected>Wählen...</option>
+                        <option value="Regie">Regie</option>
+                        <option value="Produktion">Produktion</option>
+                        <option value="Kamera">Kamera</option>
+                        <option value="Licht">Licht</option>
+                        <option value="Ton">Ton</option>
+                    </select>
+                    <div class="btn-group">
+                        <button type="button" onclick="prevStep(6)" class="btn-secondary">Zurück</button>
+                        <button type="button" onclick="submitRegistration()">Im Team eintragen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hauptanwendung -->
+    <div id="app-screen" class="screen">
+        <nav class="sidebar">
+            <h2>Ashes</h2>
+            <p id="user-role-display" class="role-badge">Rolle</p>
+            <ul class="nav-links">
+                <li onclick="switchTab('dashboard')" class="active-nav" id="nav-dashboard">Dashboard</li>
+                <li onclick="switchTab('aufgaben')" id="nav-aufgaben">Aufgaben</li>
+                <li onclick="switchTab('dokumente')" id="nav-dokumente">Dokumente</li>
+                <li onclick="switchTab('anfragen')" id="nav-anfragen">Anfragen</li>
+                <li onclick="switchTab('stabliste')" id="nav-stabliste">Stabliste</li>
+                <li onclick="switchTab('nuetzliches')" id="nav-nuetzliches">Nützliches</li>
+                <li onclick="switchTab('verwaltung')" id="nav-verwaltung" style="display: none;">Team verwalten</li>
+            </ul>
+            <button class="btn-secondary" onclick="logoutUser()" style="margin-top: auto;">Abmelden</button>
+        </nav>
+
+        <main class="content">
+            <!-- Dashboard View -->
+            <section id="dashboard" class="tab-content active">
+                <h2>Overview</h2>
+                <div class="progress-container">
+                    <p>Produktionsfortschritt</p>
+                    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="dash-column">
+                        <h3>Deine Aufgaben</h3>
+                        <ul class="task-list" id="task-list-dashboard"></ul>
+                    </div>
+                    
+                    <div class="dash-column">
+                        <h3>Freigabeanfragen</h3>
+                        <div id="requests-dashboard"></div>
+
+                        <h3 style="margin-top: 2rem;">Zentrales Material</h3>
+                        <div class="doc-grid" id="material-dashboard"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Aufgaben View -->
+            <section id="aufgaben" class="tab-content">
+                <h2>Aufgabenverwaltung</h2>
+                <div class="task-input-container">
+                    <input type="text" id="new-task-input" placeholder="Neue eigene Aufgabe hinzufügen...">
+                    <button onclick="addCustomTask()" style="width: auto;">Hinzufügen</button>
+                </div>
+
+                <h3>Eigene Aufgaben</h3>
+                <ul class="task-list" id="task-list-custom"></ul>
+
+                <h3>Notwendige Aufgaben (Standard)</h3>
+                <ul class="task-list" id="task-list-standard"></ul>
+
+                <h3>Aufgaben von anderen</h3>
+                <ul class="task-list" id="task-list-delegated"></ul>
+            </section>
+
+            <!-- Dokumente View -->
+            <section id="dokumente" class="tab-content">
+                <h2>Dokumente verwalten</h2>
+                <div class="card" style="max-width: 100%; margin-bottom: 2rem; margin-left: 0;">
+                    <h3>Neues Dokument hochladen</h3>
+                    <input type="text" id="doc-upload-name" placeholder="Titel des Dokuments (z.B. Drehplan Tag 1)" required>
+                    <input type="file" id="doc-upload-file" required>
+                    <button onclick="uploadDocument()" style="margin-top: 10px;">Hochladen</button>
+                </div>
+
+                <h3>Hochgeladene Dokumente</h3>
+                <div class="doc-grid" id="documents-list"></div>
+            </section>
+
+            <!-- Anfragen View -->
+            <section id="anfragen" class="tab-content">
+                <h2>Anfrage stellen</h2>
+                <div class="request-form-card">
+                    <select id="request-recipient" required>
+                        <option value="" disabled selected>EmpfängerIn wählen...</option>
+                    </select>
+                    <input type="text" id="request-subject" placeholder="Thema der Anfrage" required>
+                    <textarea id="request-body" placeholder="Zusätzliche Informationen und Details..." rows="5" required></textarea>
+                    <button onclick="sendRequest()">Anfrage absenden</button>
+                </div>
+
+                <h2 style="margin-top: 2rem;">Posteingang</h2>
+                <div id="requests-container"></div>
+            </section>
+
+            <!-- Stabliste View -->
+            <section id="stabliste" class="tab-content">
+                <div class="header-action">
+                    <h2>Stabliste</h2>
+                    <button onclick="exportStablistePDF()" class="action-btn">Als PDF exportieren</button>
+                </div>
+                <div class="table-container">
+                    <table id="crew-table">
+                        <thead>
+                            <tr>
+                                <th>Name / Rolle</th>
+                                <th>Kontakt</th>
+                                <th>Wohnadresse</th>
+                                <th>Ernährung / Allergien</th>
+                                <th>Transport</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crew-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Nützliches View -->
+            <section id="nuetzliches" class="tab-content">
+                <h2>Nützliches & Kontakte</h2>
+                <div class="card" style="margin-top:1rem; max-width: 100%; margin-left: 0;">
+                    <h3>Allgemeine Informationen zur Rolle</h3>
+                    <p id="role-info-text">Wird geladen...</p>
+                    <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #eee;">
+                    <h3>Wichtige Ansprechpersonen</h3>
+                    <ul id="contacts-list" style="list-style:none; line-height: 1.8;">
+                        <li><strong>Produktionsleitung:</strong> <span id="contact-produktion">Wird geladen...</span></li>
+                        <li><strong>Regie:</strong> <span id="contact-regie">Wird geladen...</span></li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Verwaltung View -->
+            <section id="verwaltung" class="tab-content">
+                <h2>Team verwalten</h2>
+                <div class="table-container" style="margin-top: 1rem;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Rolle</th>
+                                <th>Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manage-team-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
