@@ -161,7 +161,7 @@ function startApp() {
 
 function populateDropdowns() {
     const select = document.getElementById('request-recipient');
-    select.innerHTML = '<option value="" disabled selected>Department wählen...</option>';
+    select.innerHTML = '<option value="" disabled selected>EmpfängerIn / Department wählen...</option>';
     departmentsList.forEach(dep => {
         const opt = document.createElement('option');
         opt.value = dep;
@@ -190,7 +190,6 @@ function loadStabliste() {
     });
 }
 
-// Erstellt ein einheitliches Aufgaben-Listenelement
 function createTaskElement(task, docId) {
     const li = document.createElement('li');
     li.innerText = task.text;
@@ -249,10 +248,8 @@ function loadTasks() {
             total++;
             if(task.done) completed++;
 
-            // Element für das gebündelte Dashboard
             dashUl.appendChild(createTaskElement(task, doc.id));
 
-            // Elemente für die sortierte Aufgabenansicht
             if(task.type === "standard") ulStandard.appendChild(createTaskElement(task, doc.id));
             else if(task.type === "delegated") ulDelegated.appendChild(createTaskElement(task, doc.id));
             else ulCustom.appendChild(createTaskElement(task, doc.id));
@@ -274,7 +271,6 @@ async function uploadDocument() {
     
     if(!nameInput || !fileInput) return alert("Bitte Titel und Datei angeben.");
     
-    // Simuliert den Datei-Upload durch Speichern der Metadaten in der Datenbank
     await db.collection("documents").add({
         name: nameInput,
         filename: fileInput.name,
@@ -317,58 +313,116 @@ function loadDocuments() {
 
 async function sendRequest() {
     const recipient = document.getElementById('request-recipient').value;
+    const category = document.getElementById('request-category').value;
     const subject = document.getElementById('request-subject').value;
     const body = document.getElementById('request-body').value;
     
-    if(!recipient || !subject || !body) return alert("Bitte alle Felder der Anfrage ausfüllen.");
+    if(!recipient || !category || !subject || !body) return alert("Bitte alle Felder der Anfrage ausfüllen.");
 
     await db.collection("requests").add({
         sender: currentUser.name,
         senderRole: currentUser.role,
         recipient: recipient,
+        category: category, // "Entscheidung" oder "Aufgabe"
         subject: subject,
         body: body,
-        status: "offen",
+        status: "offen", // "offen", "angenommen" / "ja", "abgelehnt" / "nein"
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     document.getElementById('request-subject').value = "";
     document.getElementById('request-body').value = "";
+    document.getElementById('request-category').value = "";
     alert("Anfrage gesendet.");
 }
 
 function loadRequests() {
-    db.collection("requests").where("recipient", "==", currentUser.role).where("status", "==", "offen").onSnapshot((querySnapshot) => {
+    // 1. Posteingang (Anfragen, die an mich gerichtet sind)
+    db.collection("requests").where("recipient", "==", currentUser.role).onSnapshot((querySnapshot) => {
         const container = document.getElementById('requests-container');
         const dashContainer = document.getElementById('requests-dashboard');
         
-        container.innerHTML = '';
+        container.innerHTML = '<h3>Erhaltene Anfragen</h3>';
         dashContainer.innerHTML = '';
 
-        if (querySnapshot.empty) {
-            container.innerHTML = '<p>Keine offenen Anfragen vorhanden.</p>';
-            dashContainer.innerHTML = '<p>Keine Anfragen.</p>';
-            return;
-        }
+        let hasOpen = false;
 
         querySnapshot.forEach((doc) => {
             const req = doc.data();
+            if(req.status === "offen") hasOpen = true;
+
+            let actionButtons = '';
+            if(req.status === "offen") {
+                if(req.category === "Entscheidung") {
+                    actionButtons = `
+                        <button class="approve-btn" onclick="respondRequest('${doc.id}', 'Angenommen (Ja)', '${req.subject}', '${req.senderRole}')">Annehmen (Ja)</button>
+                        <button class="reject-btn" onclick="respondRequest('${doc.id}', 'Abgelehnt (Nein)', '${req.subject}', '${req.senderRole}')">Ablehnen (Nein)</button>
+                    `;
+                } else {
+                    actionButtons = `
+                        <button class="approve-btn" onclick="respondRequest('${doc.id}', 'Angenommen (Aufgabe)', '${req.subject}', '${req.senderRole}', true)">Annehmen & Aufgabe erstellen</button>
+                        <button class="reject-btn" onclick="respondRequest('${doc.id}', 'Abgelehnt', '${req.subject}', '${req.senderRole}')">Ablehnen</button>
+                    `;
+                }
+            } else {
+                actionButtons = `<p style="margin-top: 10px; font-weight: bold; color: #666;">Status: ${req.status}</p>`;
+            }
+
             const html = `
                 <div class="request-card">
                     <p><strong>Von:</strong> ${req.sender} (${req.senderRole})</p>
+                    <p><strong>Typ:</strong> ${req.category}</p>
                     <p><strong>Thema:</strong> ${req.subject}</p>
                     <p style="margin-top: 10px; color: #555;">${req.body}</p>
-                    <button class="approve-btn" onclick="resolveRequest('${doc.id}')">Als erledigt markieren</button>
+                    ${actionButtons}
                 </div>
             `;
             container.innerHTML += html;
-            dashContainer.innerHTML += html;
+            if(req.status === "offen") dashContainer.innerHTML += html;
+        });
+
+        if(!hasOpen) {
+            dashContainer.innerHTML = '<p>Keine offenen Anfragen.</p>';
+        }
+
+        // 2. Gesendete Anfragen (Rückmeldung für den Anfrager)
+        db.collection("requests").where("sender", "==", currentUser.name).onSnapshot((snapSent) => {
+            let sentHtml = '<h3 style="margin-top: 2rem;">Gesendete Anfragen</h3>';
+            let sentEmpty = true;
+
+            snapSent.forEach((doc) => {
+                sentEmpty = false;
+                const req = doc.data();
+                sentHtml += `
+                    <div class="request-card" style="border-left-color: #B5EAD7;">
+                        <p><strong>An:</strong> ${req.recipient}</p>
+                        <p><strong>Thema:</strong> ${req.subject}</p>
+                        <p><strong>Aktueller Status:</strong> <span style="font-weight: bold; color: #333;">${req.status}</span></p>
+                    </div>
+                `;
+            });
+
+            if(!sentEmpty) {
+                container.innerHTML += sentHtml;
+            }
         });
     });
 }
 
-function resolveRequest(docId) {
-    db.collection("requests").doc(docId).update({ status: "erledigt" });
+async function respondRequest(docId, newStatus, taskText, targetRole, isTask = false) {
+    // Status in der Anfrage aktualisieren, damit der Anfrager informiert wird
+    await db.collection("requests").doc(docId).update({ status: newStatus });
+
+    // Wenn es eine angenommene Aufgabe ist, direkt in die Aufgabenliste der Zielrolle eintragen
+    if(isTask) {
+        await db.collection("tasks").add({
+            role: targetRole,
+            text: `Delegiert: ${taskText}`,
+            done: false,
+            type: "delegated",
+            shared: false
+        });
+    }
 }
 
 function loadNutzliches() {
