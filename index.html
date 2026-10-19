@@ -140,7 +140,7 @@
                     </div>
                     
                     <div class="dash-column">
-                        <h3>Freigabeanfragen</h3>
+                        <h3>Offene Anfragen & Entscheidungen</h3>
                         <div id="requests-dashboard"></div>
 
                         <h3 style="margin-top: 2rem;">Zentrales Material</h3>
@@ -186,14 +186,19 @@
                 <h2>Anfrage stellen</h2>
                 <div class="request-form-card">
                     <select id="request-recipient" required>
-                        <option value="" disabled selected>EmpfängerIn wählen...</option>
+                        <option value="" disabled selected>EmpfängerIn / Department wählen...</option>
                     </select>
-                    <input type="text" id="request-subject" placeholder="Thema der Anfrage" required>
+                    <select id="request-category" required style="margin-top: 1rem;">
+                        <option value="" disabled selected>Kategorie wählen...</option>
+                        <option value="Entscheidung">Entscheidung (Ja / Nein)</option>
+                        <option value="Aufgabe">Aufgabe (Delegation)</option>
+                    </select>
+                    <input type="text" id="request-subject" placeholder="Thema der Anfrage" required style="margin-top: 1rem;">
                     <textarea id="request-body" placeholder="Zusätzliche Informationen und Details..." rows="5" required></textarea>
                     <button onclick="sendRequest()">Anfrage absenden</button>
                 </div>
 
-                <h2 style="margin-top: 2rem;">Posteingang</h2>
+                <h2 style="margin-top: 2rem;">Posteingang (Erhältlich & Gesendet)</h2>
                 <div id="requests-container"></div>
             </section>
 
