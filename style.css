@@ -73,6 +73,8 @@ th { background-color: var(--bg-color); }
 .request-form-card { background: var(--white); padding: 1.5rem; border-radius: 8px; border: 1px solid #eee; }
 .request-card { background: var(--white); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--secondary-color); margin-bottom: 10px; }
 .request-card button { width: auto; margin-right: 10px; margin-top: 15px; padding: 8px 16px; }
+.approve-btn { background-color: var(--primary-color); }
+.reject-btn { background-color: var(--accent-red); }
 
 @media (max-width: 768px) {
     #app-screen { flex-direction: column; }
