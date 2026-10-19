@@ -243,8 +243,6 @@ function loadTasks() {
 
         querySnapshot.forEach((doc) => {
             const task = doc.data();
-            
-            if(task.shared && task.done) return; 
 
             total++;
             if(task.done) completed++;
@@ -350,7 +348,6 @@ function loadRequests() {
             requestsList.push({ id: doc.id, ...doc.data() });
         });
 
-        // Sortieren nach Zeitstempel (neueste zuerst)
         requestsList.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
 
         let top3SentCount = 0;
@@ -359,7 +356,6 @@ function loadRequests() {
             const isForMe = req.recipient === currentUser.role || req.recipient === "Alle";
             const isFromMe = req.sender === currentUser.name;
 
-            // 1. Posteingang: Anfragen, die an mich gerichtet sind
             if (isForMe) {
                 let actionButtons = '';
                 if(req.status === "offen") {
@@ -390,7 +386,6 @@ function loadRequests() {
                 container.innerHTML += html;
             }
 
-            // 2. Dashboard: Nur die neuesten 3 selbst gestellten Anfragen
             if (isFromMe && top3SentCount < 3) {
                 const dashHtml = `
                     <div class="request-card" style="border-left-color: #B5EAD7;" data-id="${req.id}">
@@ -408,7 +403,6 @@ function loadRequests() {
             dashContainer.innerHTML = '<p>Du hast noch keine Anfragen gestellt.</p>';
         }
 
-        // 3. Vollständige Liste der gesendeten Anfragen im Anfragen-Reiter
         let sentHtml = '<h3 style="margin-top: 2rem;">Gesendete Anfragen</h3>';
         let sentEmpty = true;
 
