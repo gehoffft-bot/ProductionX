@@ -10,7 +10,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 let currentUser = null;
-let departmentsList = ["Regie", "Produktion", "Kamera", "Licht", "Ton"];
+let departmentsList = ["Alle", "Regie", "Regieassistenz", "Produktion", "Kamera", "Licht", "Ton", "Schnitt", "Maske"];
 
 window.onload = () => {
     const storedUser = localStorage.getItem('ashes_user');
@@ -146,7 +146,7 @@ function startApp() {
     document.getElementById('app-screen').classList.add('active');
     document.getElementById('user-role-display').innerText = currentUser.role;
 
-    if (currentUser.role === 'Regie' || currentUser.role === 'Produktion') {
+    if (currentUser.role === 'Regie' || currentUser.role === 'Produktion' || currentUser.role === 'Regieassistenz') {
         document.getElementById('nav-verwaltung').style.display = 'block';
         loadVerwaltung();
     }
@@ -218,6 +218,7 @@ function loadTasks() {
         if (querySnapshot.empty) {
             let defaultTasks = [];
             if (currentUser.role === 'Regie') defaultTasks = ["Shotliste finalisieren", "Drehbuch überarbeiten", "Moodboard erstellen"];
+            else if (currentUser.role === 'Regieassistenz') defaultTasks = ["Tagesdispo erstellen", "Cast betreuen", "Regie unterstützen"];
             else if (currentUser.role === 'Kamera') defaultTasks = ["Shotliste finalisieren", "Mit Licht absprechen", "Konzept erstellen"];
             else if (currentUser.role === 'Licht') defaultTasks = ["Lichtplan erstellen", "Equipmentliste prüfen", "Kamera-Absprache"];
 
@@ -323,10 +324,10 @@ async function sendRequest() {
         sender: currentUser.name,
         senderRole: currentUser.role,
         recipient: recipient,
-        category: category, // "Entscheidung" oder "Aufgabe"
+        category: category,
         subject: subject,
         body: body,
-        status: "offen", // "offen", "angenommen" / "ja", "abgelehnt" / "nein"
+        status: "offen",
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
 
@@ -337,83 +338,101 @@ async function sendRequest() {
 }
 
 function loadRequests() {
-    // 1. Posteingang (Anfragen, die an mich gerichtet sind)
-    db.collection("requests").where("recipient", "==", currentUser.role).onSnapshot((querySnapshot) => {
+    db.collection("requests").onSnapshot((querySnapshot) => {
         const container = document.getElementById('requests-container');
         const dashContainer = document.getElementById('requests-dashboard');
         
         container.innerHTML = '<h3>Erhaltene Anfragen</h3>';
         dashContainer.innerHTML = '';
 
-        let hasOpen = false;
-
+        let requestsList = [];
         querySnapshot.forEach((doc) => {
-            const req = doc.data();
-            if(req.status === "offen") hasOpen = true;
-
-            let actionButtons = '';
-            if(req.status === "offen") {
-                if(req.category === "Entscheidung") {
-                    actionButtons = `
-                        <button class="approve-btn" onclick="respondRequest('${doc.id}', 'Angenommen (Ja)', '${req.subject}', '${req.senderRole}')">Annehmen (Ja)</button>
-                        <button class="reject-btn" onclick="respondRequest('${doc.id}', 'Abgelehnt (Nein)', '${req.subject}', '${req.senderRole}')">Ablehnen (Nein)</button>
-                    `;
-                } else {
-                    actionButtons = `
-                        <button class="approve-btn" onclick="respondRequest('${doc.id}', 'Angenommen (Aufgabe)', '${req.subject}', '${req.senderRole}', true)">Annehmen & Aufgabe erstellen</button>
-                        <button class="reject-btn" onclick="respondRequest('${doc.id}', 'Abgelehnt', '${req.subject}', '${req.senderRole}')">Ablehnen</button>
-                    `;
-                }
-            } else {
-                actionButtons = `<p style="margin-top: 10px; font-weight: bold; color: #666;">Status: ${req.status}</p>`;
-            }
-
-            const html = `
-                <div class="request-card">
-                    <p><strong>Von:</strong> ${req.sender} (${req.senderRole})</p>
-                    <p><strong>Typ:</strong> ${req.category}</p>
-                    <p><strong>Thema:</strong> ${req.subject}</p>
-                    <p style="margin-top: 10px; color: #555;">${req.body}</p>
-                    ${actionButtons}
-                </div>
-            `;
-            container.innerHTML += html;
-            if(req.status === "offen") dashContainer.innerHTML += html;
+            requestsList.push({ id: doc.id, ...doc.data() });
         });
 
-        if(!hasOpen) {
-            dashContainer.innerHTML = '<p>Keine offenen Anfragen.</p>';
+        // Sortieren nach Zeitstempel (neueste zuerst)
+        requestsList.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+        let top3SentCount = 0;
+
+        requestsList.forEach((req) => {
+            const isForMe = req.recipient === currentUser.role || req.recipient === "Alle";
+            const isFromMe = req.sender === currentUser.name;
+
+            // 1. Posteingang: Anfragen, die an mich gerichtet sind
+            if (isForMe) {
+                let actionButtons = '';
+                if(req.status === "offen") {
+                    if(req.category === "Entscheidung") {
+                        actionButtons = `
+                            <button class="approve-btn" onclick="respondRequest('${req.id}', 'Angenommen (Ja)', '${req.subject}', '${req.senderRole}')">Annehmen (Ja)</button>
+                            <button class="reject-btn" onclick="respondRequest('${req.id}', 'Abgelehnt (Nein)', '${req.subject}', '${req.senderRole}')">Ablehnen (Nein)</button>
+                        `;
+                    } else {
+                        actionButtons = `
+                            <button class="approve-btn" onclick="respondRequest('${req.id}', 'Angenommen (Aufgabe)', '${req.subject}', '${req.senderRole}', true)">Annehmen & Aufgabe erstellen</button>
+                            <button class="reject-btn" onclick="respondRequest('${req.id}', 'Abgelehnt', '${req.subject}', '${req.senderRole}')">Ablehnen</button>
+                        `;
+                    }
+                } else {
+                    actionButtons = `<p style="margin-top: 10px; font-weight: bold; color: #666;">Status: ${req.status}</p>`;
+                }
+
+                const html = `
+                    <div class="request-card" data-id="${req.id}">
+                        <p><strong>Von:</strong> ${req.sender} (${req.senderRole}) | <strong>An:</strong> ${req.recipient}</p>
+                        <p><strong>Typ:</strong> ${req.category}</p>
+                        <p><strong>Thema:</strong> ${req.subject}</p>
+                        <p style="margin-top: 10px; color: #555;">${req.body}</p>
+                        ${actionButtons}
+                    </div>
+                `;
+                container.innerHTML += html;
+            }
+
+            // 2. Dashboard: Nur die neuesten 3 selbst gestellten Anfragen
+            if (isFromMe && top3SentCount < 3) {
+                const dashHtml = `
+                    <div class="request-card" style="border-left-color: #B5EAD7;" data-id="${req.id}">
+                        <p><strong>An:</strong> ${req.recipient}</p>
+                        <p><strong>Thema:</strong> ${req.subject}</p>
+                        <p><strong>Status:</strong> <span style="font-weight: bold; color: #333;">${req.status}</span></p>
+                    </div>
+                `;
+                dashContainer.innerHTML += dashHtml;
+                top3SentCount++;
+            }
+        });
+
+        if(dashContainer.innerHTML === '') {
+            dashContainer.innerHTML = '<p>Du hast noch keine Anfragen gestellt.</p>';
         }
 
-        // 2. Gesendete Anfragen (Rückmeldung für den Anfrager)
-        db.collection("requests").where("sender", "==", currentUser.name).onSnapshot((snapSent) => {
-            let sentHtml = '<h3 style="margin-top: 2rem;">Gesendete Anfragen</h3>';
-            let sentEmpty = true;
+        // 3. Vollständige Liste der gesendeten Anfragen im Anfragen-Reiter
+        let sentHtml = '<h3 style="margin-top: 2rem;">Gesendete Anfragen</h3>';
+        let sentEmpty = true;
 
-            snapSent.forEach((doc) => {
+        requestsList.forEach((req) => {
+            if(req.sender === currentUser.name) {
                 sentEmpty = false;
-                const req = doc.data();
                 sentHtml += `
-                    <div class="request-card" style="border-left-color: #B5EAD7;">
+                    <div class="request-card" style="border-left-color: #B5EAD7;" data-id="${req.id}">
                         <p><strong>An:</strong> ${req.recipient}</p>
                         <p><strong>Thema:</strong> ${req.subject}</p>
                         <p><strong>Aktueller Status:</strong> <span style="font-weight: bold; color: #333;">${req.status}</span></p>
                     </div>
                 `;
-            });
-
-            if(!sentEmpty) {
-                container.innerHTML += sentHtml;
             }
         });
+
+        if(!sentEmpty) {
+            container.innerHTML += sentHtml;
+        }
     });
 }
 
 async function respondRequest(docId, newStatus, taskText, targetRole, isTask = false) {
-    // Status in der Anfrage aktualisieren, damit der Anfrager informiert wird
     await db.collection("requests").doc(docId).update({ status: newStatus });
-
-    // Wenn es eine angenommene Aufgabe ist, direkt in die Aufgabenliste der Zielrolle eintragen
     if(isTask) {
         await db.collection("tasks").add({
             role: targetRole,
@@ -425,13 +444,25 @@ async function respondRequest(docId, newStatus, taskText, targetRole, isTask = f
     }
 }
 
+async function clearInbox() {
+    if(confirm("Möchtest du den Posteingang wirklich leeren?")) {
+        const snapshot = await db.collection("requests").get();
+        const batch = db.batch();
+        snapshot.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+    }
+}
+
 function loadNutzliches() {
     const roleInfoDict = {
-        "Regie": "Verantwortlich für die kreative Vision, Schauspielführung und die finale Bildgestaltung in Zusammenarbeit mit der Kamera.",
-        "Produktion": "Verantwortlich für organisatorische, finanzielle und logistische Abläufe des Drehs.",
-        "Kamera": "Setzt die kreative Vision visuell um. Erstellt Shotlisten und plant das Lichtkonzept.",
-        "Licht": "Verantwortlich für die technische Umsetzung des Lichtkonzepts in Absprache mit der Kamera.",
-        "Ton": "Verantwortlich für die saubere Aufnahme der Dialoge und der Atmo am Set."
+        "Regie": "Verantwortlich für die kreative Vision, Schauspielführung und die finale Bildgestaltung.",
+        "Regieassistenz": "Unterstützt die Regie, erstellt Tagesdispos und koordiniert am Set.",
+        "Produktion": "Verantwortlich für organisatorische, finanzielle und logistische Abläufe.",
+        "Kamera": "Setzt die kreative Vision visuell um.",
+        "Licht": "Technische Umsetzung des Lichtkonzepts.",
+        "Ton": "Verantwortlich für die saubere Aufnahme der Dialoge und Atmo."
     };
 
     document.getElementById('role-info-text').innerText = roleInfoDict[currentUser.role] || "Allgemeine Rolle am Set.";
@@ -439,15 +470,18 @@ function loadNutzliches() {
     db.collection("crew").onSnapshot((querySnapshot) => {
         let prodNum = "Nicht besetzt";
         let regieNum = "Nicht besetzt";
+        let regieAsstNum = "Nicht besetzt";
 
         querySnapshot.forEach((doc) => {
             const member = doc.data();
             if (member.role === "Produktion") prodNum = `${member.name} (${member.phone})`;
             if (member.role === "Regie") regieNum = `${member.name} (${member.phone})`;
+            if (member.role === "Regieassistenz") regieAsstNum = `${member.name} (${member.phone})`;
         });
 
         document.getElementById('contact-produktion').innerText = prodNum;
         document.getElementById('contact-regie').innerText = regieNum;
+        document.getElementById('contact-regieassistenz').innerText = regieAsstNum;
     });
 }
 
@@ -467,6 +501,34 @@ function loadVerwaltung() {
             tbody.appendChild(tr);
         });
     });
+}
+
+async function addNewTeamMember() {
+    const name = document.getElementById('new-member-name').value;
+    const email = document.getElementById('new-member-email').value;
+    const phone = document.getElementById('new-member-phone').value;
+    const role = document.getElementById('new-member-role').value;
+
+    if(!name || !email || !phone || !role) return alert("Bitte alle Felder ausfüllen.");
+
+    await db.collection("crew").add({
+        name: name,
+        email: email,
+        phone: phone,
+        role: role,
+        dob: "Nicht angegeben",
+        address: "Nicht angegeben",
+        diet: "Keine",
+        allergy: "Keine",
+        transport: "Nicht angegeben",
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    document.getElementById('new-member-name').value = "";
+    document.getElementById('new-member-email').value = "";
+    document.getElementById('new-member-phone').value = "";
+    document.getElementById('new-member-role').value = "";
+    alert("Crew-Mitglied erfolgreich hinzugefügt!");
 }
 
 async function deleteMember(docId) {
