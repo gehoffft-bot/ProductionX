@@ -34,6 +34,23 @@
                     <button type="button" onclick="nextStep(1)">Weiter</button>
                     <button class="btn-secondary" onclick="showLogin()" style="margin-top: 10px;">Zurück zum Login</button>
                 </div>
+                                <div class="form-step" id="step-6">
+                    <label>🎬 Rolle im Team</label>
+                    <select id="role" required>
+                        <option value="" disabled selected>Wählen...</option>
+                        <option value="Regie">Regie</option>
+                        <option value="Regieassistenz">Regieassistenz</option>
+                        <option value="Produktion">Produktion</option>
+                        <option value="Kamera">Kamera</option>
+                        <option value="Licht">Licht</option>
+                        <option value="Ton">Ton</option>
+                        <option value="Schnitt">Schnitt</option>
+                        <option value="Maske">Maske / Kostüm</option>
+                    </select>
+                    <div class="btn-group">
+                        <button type="button" onclick="prevStep(6)" class="btn-secondary">Zurück</button>
+                        <button type="button" onclick="submitRegistration()">Im Team eintragen</button>
+                    </div>
                 <div class="form-step" id="step-2">
                     <label>🎂 Geburtsdatum</label>
                     <input type="date" id="dob" required>
@@ -88,23 +105,6 @@
                         <button type="button" onclick="nextStep(5)">Weiter</button>
                     </div>
                 </div>
-                <div class="form-step" id="step-6">
-                    <label>🎬 Rolle im Team</label>
-                    <select id="role" required>
-                        <option value="" disabled selected>Wählen...</option>
-                        <option value="Regie">Regie</option>
-                        <option value="Regieassistenz">Regieassistenz</option>
-                        <option value="Produktion">Produktion</option>
-                        <option value="Kamera">Kamera</option>
-                        <option value="Licht">Licht</option>
-                        <option value="Ton">Ton</option>
-                        <option value="Schnitt">Schnitt</option>
-                        <option value="Maske">Maske / Kostüm</option>
-                    </select>
-                    <div class="btn-group">
-                        <button type="button" onclick="prevStep(6)" class="btn-secondary">Zurück</button>
-                        <button type="button" onclick="submitRegistration()">Im Team eintragen</button>
-                    </div>
                 </div>
             </div>
         </div>
