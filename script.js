@@ -518,10 +518,10 @@ async function addNewTeamMember() {
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
 
+    document.getElementById('new-member-role').value = "";
     document.getElementById('new-member-name').value = "";
     document.getElementById('new-member-email').value = "";
     document.getElementById('new-member-phone').value = "";
-    document.getElementById('new-member-role').value = "";
     alert("Crew-Mitglied erfolgreich hinzugefügt!");
 }
 
